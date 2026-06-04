@@ -224,6 +224,20 @@ const TICKERS=[
  {n:'한국항공우주',s:'047810.KS',m:'KR'},{n:'현대로템',s:'064350.KS',m:'KR'},{n:'현대모비스',s:'012330.KS',m:'KR'},
  {n:'에코프로비엠',s:'247540.KQ',m:'KR'},{n:'에코프로',s:'086520.KQ',m:'KR'},{n:'알테오젠',s:'196170.KQ',m:'KR'},
  {n:'HLB',s:'028300.KQ',m:'KR'},{n:'펄어비스',s:'263750.KQ',m:'KR'},{n:'카카오게임즈',s:'293490.KQ',m:'KR'},
+ // 한국 상장 ETF
+ {n:'TIGER 미국나스닥100',s:'133690.KS',m:'KR'},{n:'TIGER 미국S&P500',s:'360750.KS',m:'KR'},
+ {n:'TIGER 미국테크TOP10 INDXX',s:'381170.KS',m:'KR'},{n:'TIGER 미국테크TOP10채권혼합',s:'472170.KS',m:'KR'},
+ {n:'TIGER 미국배당다우존스',s:'458730.KS',m:'KR'},{n:'TIGER 미국필라델피아반도체나스닥',s:'381180.KS',m:'KR'},
+ {n:'TIGER 차이나전기차SOLACTIVE',s:'371460.KS',m:'KR'},{n:'TIGER 2차전지테마',s:'305540.KS',m:'KR'},
+ {n:'TIGER CD금리투자KIS',s:'357870.KS',m:'KR'},
+ {n:'KODEX 200',s:'069500.KS',m:'KR'},{n:'KODEX 레버리지',s:'122630.KS',m:'KR'},
+ {n:'KODEX 코스닥150',s:'229200.KS',m:'KR'},{n:'KODEX 코스닥150레버리지',s:'233740.KS',m:'KR'},
+ {n:'KODEX 인버스',s:'114800.KS',m:'KR'},{n:'KODEX 200선물인버스2X',s:'252670.KS',m:'KR'},
+ {n:'KODEX 미국S&P500TR',s:'379800.KS',m:'KR'},{n:'KODEX 미국나스닥100TR',s:'379810.KS',m:'KR'},
+ {n:'KODEX 반도체',s:'091160.KS',m:'KR'},{n:'KODEX 골드선물(H)',s:'132030.KS',m:'KR'},
+ {n:'KODEX CD금리액티브',s:'459580.KS',m:'KR'},
+ {n:'ACE 미국S&P500',s:'360200.KS',m:'KR'},{n:'ACE 미국나스닥100',s:'367380.KS',m:'KR'},
+ {n:'SOL 미국배당다우존스',s:'446720.KS',m:'KR'},
  // 미국주식
  {n:'애플',s:'AAPL',m:'US'},{n:'마이크로소프트',s:'MSFT',m:'US'},{n:'엔비디아',s:'NVDA',m:'US'},
  {n:'구글(알파벳)',s:'GOOGL',m:'US'},{n:'아마존',s:'AMZN',m:'US'},{n:'테슬라',s:'TSLA',m:'US'},
@@ -385,6 +399,7 @@ async function addHolding(){
     const t=TICKERS.find(t=>t.n===n||t.s.split('.')[0]===n.toUpperCase());
     if(t&&t.m===mkt)sym=t.s;
     else if(mkt==='US'||mkt==='COIN')sym=n.toUpperCase();
+    else if(mkt==='KR'&&/^\d{6}$/.test(n))sym=n+'.KS'; // 6자리 종목코드 직접 입력
   }
   S.holdings.push({name:n,sym:sym||'',mkt,qty:q,avg:a,cur:a,acct:fAcct.value});
   fName.value=fQty.value=fAvg.value='';pendingSym='';
