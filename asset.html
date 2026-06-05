@@ -41,7 +41,7 @@
   th,td{padding:9px 4px;text-align:right;border-bottom:1px solid #f1f3f8;white-space:nowrap}
   th{color:#98a0b3;font-weight:700;font-size:11px}
   tr:last-child td{border-bottom:none}
-  td:first-child,th:first-child{text-align:left}
+  td:first-child,th:first-child,td:nth-child(2),th:nth-child(2){text-align:left}
   tr.hit td{background:#fff8e1}
   mark{background:#ffe27a;border-radius:3px;padding:0 2px}
   .up{color:#e0342f;font-weight:700}.down{color:#1763e6;font-weight:700}
@@ -108,7 +108,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.3</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.4</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
