@@ -108,7 +108,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.5</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.6</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -553,11 +553,12 @@ function importData(inp){
   r.readAsText(f);
 }
 // ===== 드래그로 순서 바꾸기 (≡ 손잡이를 누른 채 이동) =====
-let dragRow=null;
+let dragRow=null,dragType='tbl'; // tbl=보유종목, acct=계좌, grp=그룹
 const getY=e=>e.touches?e.touches[0].clientY:e.clientY;
-function dragStart(e){
-  e.preventDefault();
-  dragRow=e.target.closest('tr');
+function dragStart(e,type){
+  e.preventDefault();e.stopPropagation();
+  dragType=type||'tbl';
+  dragRow=e.target.closest('[data-ord]');
   if(!dragRow)return;
   dragRow.classList.add('dragging');
   document.addEventListener('touchmove',dragMove,{passive:false});
@@ -569,7 +570,7 @@ function dragMove(e){
   if(!dragRow)return;
   e.preventDefault();
   const y=getY(e);
-  const others=[...dragRow.parentNode.querySelectorAll('tr[data-idx]')].filter(r=>r!==dragRow);
+  const others=[...dragRow.parentNode.querySelectorAll('[data-ord]')].filter(r=>r!==dragRow);
   for(const r of others){
     const rect=r.getBoundingClientRect();
     if(y>rect.top&&y<rect.bottom){
@@ -581,17 +582,18 @@ function dragMove(e){
 }
 function dragEnd(){
   if(!dragRow)return;
-  const tbody=dragRow.parentNode;
+  const box=dragRow.parentNode;
   dragRow.classList.remove('dragging');
   document.removeEventListener('touchmove',dragMove);
   document.removeEventListener('touchend',dragEnd);
   document.removeEventListener('mousemove',dragMove);
   document.removeEventListener('mouseup',dragEnd);
-  // 화면의 새 순서를 실제 데이터에 반영 (보이는 종목들끼리만 자리 교환)
-  const order=[...tbody.querySelectorAll('tr[data-idx]')].map(r=>+r.dataset.idx);
+  // 화면의 새 순서를 실제 데이터에 반영 (보이는 항목들끼리만 자리 교환)
+  const arr=dragType==='acct'?S.accounts:S.holdings;
+  const order=[...box.querySelectorAll('[data-ord]')].map(r=>+r.dataset.ord);
   const slots=[...order].sort((a,b)=>a-b);
-  const items=order.map(i=>S.holdings[i]);
-  slots.forEach((slot,k)=>{S.holdings[slot]=items[k]});
+  const items=order.map(i=>arr[i]);
+  slots.forEach((slot,k)=>{arr[slot]=items[k]});
   dragRow=null;
   save();render();
 }
@@ -627,7 +629,7 @@ function render(){
     shown++;
     const cur$=h.mkt==='US'?'$':'';
     const acctTag=S.view==='ALL'?`<div class="small" style="font-size:10px">${esc(h.acct)}</div>`:'';
-    rowsArr.push(`<tr class="${q?'hit':''}" data-idx="${i}"><td style="padding:0"><span class="drag-handle" ontouchstart="dragStart(event)" onmousedown="dragStart(event)">≡</span></td><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
+    rowsArr.push(`<tr class="${q?'hit':''}" data-ord="${i}"><td style="padding:0"><span class="drag-handle" ontouchstart="dragStart(event,'tbl')" onmousedown="dragStart(event,'tbl')">≡</span></td><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
   });
   const TBL_LIMIT=5;
   const cut=!q&&rowsArr.length>TBL_LIMIT; // 검색 중에는 전부 표시
@@ -647,12 +649,12 @@ function render(){
   const allTot=acctTotals.reduce((s,x)=>s+x.v,0);
   if(S.view==='ALL'&&acctTotals.length){
     acctCard.style.display='';
-    const sortedAcc=acctTotals.sort((x,y)=>y.v-x.v);
+    const sortedAcc=acctTotals; // 계좌 순서는 사용자가 드래그로 정한 순서(S.accounts) 그대로
     const ACC_LIMIT=3;
     const showAcc=acctOpen?sortedAcc:sortedAcc.slice(0,ACC_LIMIT);
     acctList.innerHTML=showAcc.map(x=>{
       const r=x.c?(x.v-x.c)/x.c*100:0;
-      return `<div class="acct-row" onclick="setView('${esc(x.a).replace(/'/g,"\\'")}')"><div class="acct-ico">${ACCT_ICONS[x.i%ACCT_ICONS.length]}</div><div><div class="acct-name">${esc(x.a)}</div><div class="acct-sub">${x.n}종목 · ${allTot?(x.v/allTot*100).toFixed(0):0}%</div></div><div class="acct-amt"><b>${W(x.v)}원</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div></div>`;
+      return `<div class="acct-row" data-ord="${x.i}" onclick="setView('${esc(x.a).replace(/'/g,"\\'")}')"><span class="drag-handle" ontouchstart="dragStart(event,'acct')" onmousedown="dragStart(event,'acct')" onclick="event.stopPropagation()">≡</span><div class="acct-ico">${ACCT_ICONS[x.i%ACCT_ICONS.length]}</div><div><div class="acct-name">${esc(x.a)}</div><div class="acct-sub">${x.n}종목 · ${allTot?(x.v/allTot*100).toFixed(0):0}%</div></div><div class="acct-amt"><b>${W(x.v)}원</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div></div>`;
     }).join('')
     +(sortedAcc.length>ACC_LIMIT?`<div class="acct-toggle" onclick="toggleAcct()">${acctOpen?'▲ 접기':'▼ 전체 보기 ('+sortedAcc.length+'개 계좌)'}</div>`:'');
   }else acctCard.style.display='none';
@@ -672,21 +674,12 @@ function render(){
     grpBody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;padding-bottom:10px;border-bottom:1px solid #f1f3f8"><div><div class="small">${curGrp} 총액</div><div style="font-size:20px;font-weight:800">${W(gv)}원</div></div><div style="text-align:right"><div class="small">손익 / 수익률</div><div class="${gp>=0?'up':'down'}" style="font-weight:800">${gp>=0?'+':''}${W(gp)}원 (${gr>=0?'+':''}${gr.toFixed(1)}%)</div></div></div>`
     +ghShow.map(o=>{
       const v=valKRW(o.h),c=costKRW(o.h),r=c?(v-c)/c*100:0;
-      return `<div class="acct-row" style="cursor:default"><div><div class="acct-name">${esc(o.h.name)}</div><div class="acct-sub">${o.h.qty} · ${esc(o.h.acct||'')}</div></div><div class="acct-amt"><b>${KM(v)}</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div><button class="btn-sm" style="margin-left:10px" onclick="rmFromGrp(${o.i})">빼기</button></div>`;
+      return `<div class="acct-row" style="cursor:default" data-ord="${o.i}"><span class="drag-handle" ontouchstart="dragStart(event,'grp')" onmousedown="dragStart(event,'grp')">≡</span><div><div class="acct-name">${esc(o.h.name)}</div><div class="acct-sub">${o.h.qty} · ${esc(o.h.acct||'')}</div></div><div class="acct-amt"><b>${KM(v)}</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div><button class="btn-sm" style="margin-left:10px" onclick="rmFromGrp(${o.i})">빼기</button></div>`;
     }).join('')
     +(gh.length>GRP_LIMIT?`<div class="acct-toggle" onclick="toggleGrpList()">${grpListOpen?'▲ 접기':'▼ 전체 보기 ('+gh.length+'개 종목)'}</div>`:'');
   }
-  // 파이
+  // 같은 종목 합산 (자산 배분 + 상위 보유 공용: 수량 합계, 평단 가중평균)
   const viewH=S.holdings.filter(inView);
-  let deg=0,grad=[],lg='';
-  viewH.forEach((h,i)=>{
-    const p=tot?valKRW(h)/tot*360:0,col=COLORS[i%COLORS.length];
-    grad.push(`${col} ${deg}deg ${deg+p}deg`);deg+=p;
-    lg+=`<span><span class="dot" style="background:${col}"></span>${h.name} ${tot?(valKRW(h)/tot*100).toFixed(0):0}%</span>`;
-  });
-  pie.style.background=grad.length?`conic-gradient(${grad.join(',')})`:'#eee';
-  legend.innerHTML=lg||'<span class="small">종목을 추가하면 표시됩니다</span>';
-  // 상위 보유 종목 (같은 종목은 하나로 합산: 수량 합계, 평단은 가중평균)
   const aggMap={};
   viewH.forEach((h,i)=>{
     const key=(h.sym||h.name)+'|'+h.mkt;
@@ -694,12 +687,21 @@ function render(){
     aggMap[key].v+=valKRW(h);aggMap[key].c+=costKRW(h);
   });
   const sorted=Object.values(aggMap).sort((a,b)=>b.v-a.v);
+  // 파이 (합산 기준, 색상은 상위 보유와 동일)
+  let deg=0,grad=[],lg='';
+  sorted.forEach((o,idx)=>{
+    const p=tot?o.v/tot*360:0,col=COLORS[idx%COLORS.length];
+    grad.push(`${col} ${deg}deg ${deg+p}deg`);deg+=p;
+    lg+=`<span><span class="dot" style="background:${col}"></span>${o.h.name} ${tot?(o.v/tot*100).toFixed(0):0}%</span>`;
+  });
+  pie.style.background=grad.length?`conic-gradient(${grad.join(',')})`:'#eee';
+  legend.innerHTML=lg||'<span class="small">종목을 추가하면 표시됩니다</span>';
   const maxV=sorted.length?sorted[0].v:0;
   topCnt.textContent=sorted.length?sorted.length+'개 종목':'';
   const TOP_LIMIT=3;
   const topShow=(!topOpen&&sorted.length>TOP_LIMIT)?sorted.slice(0,TOP_LIMIT):sorted;
-  allocBars.innerHTML=sorted.length?topShow.map(o=>{
-    const pct=tot?o.v/tot*100:0,wd=maxV?o.v/maxV*100:0,col=COLORS[o.i%COLORS.length];
+  allocBars.innerHTML=sorted.length?topShow.map((o,idx)=>{
+    const pct=tot?o.v/tot*100:0,wd=maxV?o.v/maxV*100:0,col=COLORS[idx%COLORS.length];
     const r=o.c?(o.v-o.c)/o.c*100:0;
     const hit=q&&(o.h.name.toLowerCase().includes(q)||(o.h.sym&&o.h.sym.toLowerCase().includes(q)));
     return `<div class="top-item${hit?' hit':''}">
