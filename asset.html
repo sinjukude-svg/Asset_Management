@@ -105,7 +105,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.1</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.2</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -329,8 +329,11 @@ const inView=h=>S.view==='ALL'||h.acct===S.view;
 
 // ===== 계좌 =====
 function setView(v){S.view=v;save();render()}
-let acctOpen=false;
+let acctOpen=false,tblOpen=false,topOpen=false,grpListOpen=false;
 function toggleAcct(){acctOpen=!acctOpen;render()}
+function toggleTbl(){tblOpen=!tblOpen;render()}
+function toggleTop(){topOpen=!topOpen;render()}
+function toggleGrpList(){grpListOpen=!grpListOpen;render()}
 // ===== 그룹 =====
 const GROUPS=['그룹1','그룹2','그룹3'];
 let curGrp='그룹1';
@@ -568,7 +571,8 @@ function render(){
   // 보유종목 표
   const q=fSearch.value.trim().toLowerCase();
   let tot=0,cost=0,shown=0;
-  const tb=document.querySelector('#tbl tbody');tb.innerHTML='';
+  const tb=document.querySelector('#tbl tbody');
+  const rowsArr=[];
   S.holdings.forEach((h,i)=>{
     if(!inView(h))return;
     const v=valKRW(h),c=costKRW(h),r=c?(v-c)/c*100:0;tot+=v;cost+=c;
@@ -577,8 +581,12 @@ function render(){
     shown++;
     const cur$=h.mkt==='US'?'$':'';
     const acctTag=S.view==='ALL'?`<div class="small" style="font-size:10px">${esc(h.acct)}</div>`:'';
-    tb.insertAdjacentHTML('beforeend',`<tr class="${q?'hit':''}"><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
+    rowsArr.push(`<tr class="${q?'hit':''}"><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
   });
+  const TBL_LIMIT=5;
+  const cut=!q&&rowsArr.length>TBL_LIMIT; // 검색 중에는 전부 표시
+  tb.innerHTML=(cut&&!tblOpen?rowsArr.slice(0,TBL_LIMIT):rowsArr).join('')
+    +(cut?`<tr><td colspan="7" style="padding:4px 0;border:none"><div class="acct-toggle" onclick="toggleTbl()">${tblOpen?'▲ 접기':'▼ 전체 보기 ('+rowsArr.length+'개 종목)'}</div></td></tr>`:'');
   if(!shown)tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#999;padding:14px">${q?'검색 결과가 없습니다':'이 계좌에 종목이 없습니다'}</td></tr>`;
   searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'종목 이름을 누르면 수량·평단가를 수정할 수 있습니다.';
   totalVal.textContent=W(tot)+'원';
@@ -613,11 +621,14 @@ function render(){
   }else{
     const gv=gh.reduce((s,o)=>s+valKRW(o.h),0),gc=gh.reduce((s,o)=>s+costKRW(o.h),0);
     const gp=gv-gc,gr=gc?gp/gc*100:0;
+    const GRP_LIMIT=3;
+    const ghShow=(!grpListOpen&&gh.length>GRP_LIMIT)?gh.slice(0,GRP_LIMIT):gh;
     grpBody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;padding-bottom:10px;border-bottom:1px solid #f1f3f8"><div><div class="small">${curGrp} 총액</div><div style="font-size:20px;font-weight:800">${W(gv)}원</div></div><div style="text-align:right"><div class="small">손익 / 수익률</div><div class="${gp>=0?'up':'down'}" style="font-weight:800">${gp>=0?'+':''}${W(gp)}원 (${gr>=0?'+':''}${gr.toFixed(1)}%)</div></div></div>`
-    +gh.map(o=>{
+    +ghShow.map(o=>{
       const v=valKRW(o.h),c=costKRW(o.h),r=c?(v-c)/c*100:0;
       return `<div class="acct-row" style="cursor:default"><div><div class="acct-name">${esc(o.h.name)}</div><div class="acct-sub">${o.h.qty} · ${esc(o.h.acct||'')}</div></div><div class="acct-amt"><b>${KM(v)}</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div><button class="btn-sm" style="margin-left:10px" onclick="rmFromGrp(${o.i})">빼기</button></div>`;
-    }).join('');
+    }).join('')
+    +(gh.length>GRP_LIMIT?`<div class="acct-toggle" onclick="toggleGrpList()">${grpListOpen?'▲ 접기':'▼ 전체 보기 ('+gh.length+'개 종목)'}</div>`:'');
   }
   // 파이
   const viewH=S.holdings.filter(inView);
@@ -633,7 +644,9 @@ function render(){
   const sorted=viewH.map((h,i)=>({h,i,v:valKRW(h),c:costKRW(h)})).sort((a,b)=>b.v-a.v);
   const maxV=sorted.length?sorted[0].v:0;
   topCnt.textContent=sorted.length?sorted.length+'개 종목':'';
-  allocBars.innerHTML=sorted.length?sorted.map(o=>{
+  const TOP_LIMIT=3;
+  const topShow=(!topOpen&&sorted.length>TOP_LIMIT)?sorted.slice(0,TOP_LIMIT):sorted;
+  allocBars.innerHTML=sorted.length?topShow.map(o=>{
     const pct=tot?o.v/tot*100:0,wd=maxV?o.v/maxV*100:0,col=COLORS[o.i%COLORS.length];
     const r=o.c?(o.v-o.c)/o.c*100:0;
     const hit=q&&(o.h.name.toLowerCase().includes(q)||(o.h.sym&&o.h.sym.toLowerCase().includes(q)));
@@ -642,7 +655,7 @@ function render(){
       <div class="top-bar"><div class="top-fill" style="width:${wd}%;background:linear-gradient(90deg,${col},${col}b3)"></div></div>
       <div class="top-line2"><span>${o.h.sym?o.h.sym.split('.')[0]:MKT_LABEL[o.h.mkt]}</span><span>${pct.toFixed(1)}%</span></div>
     </div>`;
-  }).join(''):'<p class="small" style="text-align:center;padding:8px">종목을 추가하면 표시됩니다</p>';
+  }).join('')+(sorted.length>TOP_LIMIT?`<div class="acct-toggle" onclick="toggleTop()">${topOpen?'▲ 접기':'▼ 전체 보기 ('+sorted.length+'개 종목)'}</div>`:''):'<p class="small" style="text-align:center;padding:8px">종목을 추가하면 표시됩니다</p>';
   // 자산 추이 (계좌별)
   chartHint.textContent=S.view==='ALL'
     ?'아래 버튼을 누르면 오늘 날짜로 전체·계좌별 자산이 기록됩니다.'
