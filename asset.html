@@ -108,7 +108,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.4</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.5</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -686,8 +686,14 @@ function render(){
   });
   pie.style.background=grad.length?`conic-gradient(${grad.join(',')})`:'#eee';
   legend.innerHTML=lg||'<span class="small">종목을 추가하면 표시됩니다</span>';
-  // 상위 보유 종목
-  const sorted=viewH.map((h,i)=>({h,i,v:valKRW(h),c:costKRW(h)})).sort((a,b)=>b.v-a.v);
+  // 상위 보유 종목 (같은 종목은 하나로 합산: 수량 합계, 평단은 가중평균)
+  const aggMap={};
+  viewH.forEach((h,i)=>{
+    const key=(h.sym||h.name)+'|'+h.mkt;
+    if(!aggMap[key])aggMap[key]={h,i,v:0,c:0};
+    aggMap[key].v+=valKRW(h);aggMap[key].c+=costKRW(h);
+  });
+  const sorted=Object.values(aggMap).sort((a,b)=>b.v-a.v);
   const maxV=sorted.length?sorted[0].v:0;
   topCnt.textContent=sorted.length?sorted.length+'개 종목':'';
   const TOP_LIMIT=3;
