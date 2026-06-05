@@ -34,6 +34,9 @@
   .h-ico{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#eef1ff,#f3eeff);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
   .small{font-size:12px;color:#6b7280}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .drag-handle{cursor:grab;color:#c3c9d6;font-size:15px;padding:6px 7px;touch-action:none;user-select:none;-webkit-user-select:none;display:inline-block}
+  tr.dragging{opacity:.65;background:#eef1ff}
+  tr.dragging td{background:#eef1ff}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{padding:9px 4px;text-align:right;border-bottom:1px solid #f1f3f8;white-space:nowrap}
   th{color:#98a0b3;font-weight:700;font-size:11px}
@@ -105,7 +108,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.2</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.3</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -170,7 +173,7 @@
   <h2><span class="h-ico">📋</span>보유종목 수익률</h2>
   <input class="search" id="fSearch" placeholder="종목 검색 (예: NNOX)" oninput="render()">
   <p class="small" id="searchInfo" style="margin-bottom:6px">현재가는 자동 조회되며, 칸을 직접 수정할 수도 있습니다.</p>
-  <div class="tbl-wrap"><table id="tbl"><thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>평가액(원)</th><th>수익률</th><th></th></tr></thead><tbody></tbody></table></div>
+  <div class="tbl-wrap"><table id="tbl"><thead><tr><th></th><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>평가액(원)</th><th>수익률</th><th></th></tr></thead><tbody></tbody></table></div>
 </div>
 
 <div class="card">
@@ -549,6 +552,49 @@ function importData(inp){
   r.onload=e=>{try{S=JSON.parse(e.target.result);if(!S.accounts)S.accounts=['일반계좌1'];if(!S.view)S.view='ALL';S.holdings.forEach(h=>{if(!h.acct)h.acct=S.accounts[0]});save();render();alert('가져오기 완료')}catch(_){alert('파일 형식 오류')}};
   r.readAsText(f);
 }
+// ===== 드래그로 순서 바꾸기 (≡ 손잡이를 누른 채 이동) =====
+let dragRow=null;
+const getY=e=>e.touches?e.touches[0].clientY:e.clientY;
+function dragStart(e){
+  e.preventDefault();
+  dragRow=e.target.closest('tr');
+  if(!dragRow)return;
+  dragRow.classList.add('dragging');
+  document.addEventListener('touchmove',dragMove,{passive:false});
+  document.addEventListener('touchend',dragEnd);
+  document.addEventListener('mousemove',dragMove);
+  document.addEventListener('mouseup',dragEnd);
+}
+function dragMove(e){
+  if(!dragRow)return;
+  e.preventDefault();
+  const y=getY(e);
+  const others=[...dragRow.parentNode.querySelectorAll('tr[data-idx]')].filter(r=>r!==dragRow);
+  for(const r of others){
+    const rect=r.getBoundingClientRect();
+    if(y>rect.top&&y<rect.bottom){
+      if(y<rect.top+rect.height/2)r.parentNode.insertBefore(dragRow,r);
+      else r.parentNode.insertBefore(dragRow,r.nextSibling);
+      break;
+    }
+  }
+}
+function dragEnd(){
+  if(!dragRow)return;
+  const tbody=dragRow.parentNode;
+  dragRow.classList.remove('dragging');
+  document.removeEventListener('touchmove',dragMove);
+  document.removeEventListener('touchend',dragEnd);
+  document.removeEventListener('mousemove',dragMove);
+  document.removeEventListener('mouseup',dragEnd);
+  // 화면의 새 순서를 실제 데이터에 반영 (보이는 종목들끼리만 자리 교환)
+  const order=[...tbody.querySelectorAll('tr[data-idx]')].map(r=>+r.dataset.idx);
+  const slots=[...order].sort((a,b)=>a-b);
+  const items=order.map(i=>S.holdings[i]);
+  slots.forEach((slot,k)=>{S.holdings[slot]=items[k]});
+  dragRow=null;
+  save();render();
+}
 function hilite(name,q){
   if(!q)return name;
   const idx=name.toLowerCase().indexOf(q);
@@ -581,13 +627,13 @@ function render(){
     shown++;
     const cur$=h.mkt==='US'?'$':'';
     const acctTag=S.view==='ALL'?`<div class="small" style="font-size:10px">${esc(h.acct)}</div>`:'';
-    rowsArr.push(`<tr class="${q?'hit':''}"><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
+    rowsArr.push(`<tr class="${q?'hit':''}" data-idx="${i}"><td style="padding:0"><span class="drag-handle" ontouchstart="dragStart(event)" onmousedown="dragStart(event)">≡</span></td><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
   });
   const TBL_LIMIT=5;
   const cut=!q&&rowsArr.length>TBL_LIMIT; // 검색 중에는 전부 표시
   tb.innerHTML=(cut&&!tblOpen?rowsArr.slice(0,TBL_LIMIT):rowsArr).join('')
-    +(cut?`<tr><td colspan="7" style="padding:4px 0;border:none"><div class="acct-toggle" onclick="toggleTbl()">${tblOpen?'▲ 접기':'▼ 전체 보기 ('+rowsArr.length+'개 종목)'}</div></td></tr>`:'');
-  if(!shown)tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#999;padding:14px">${q?'검색 결과가 없습니다':'이 계좌에 종목이 없습니다'}</td></tr>`;
+    +(cut?`<tr><td colspan="8" style="padding:4px 0;border:none"><div class="acct-toggle" onclick="toggleTbl()">${tblOpen?'▲ 접기':'▼ 전체 보기 ('+rowsArr.length+'개 종목)'}</div></td></tr>`:'');
+  if(!shown)tb.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#999;padding:14px">${q?'검색 결과가 없습니다':'이 계좌에 종목이 없습니다'}</td></tr>`;
   searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'종목 이름을 누르면 수량·평단가를 수정할 수 있습니다.';
   totalVal.textContent=W(tot)+'원';
   const pnl=tot-cost,pr=cost?pnl/cost*100:0;
