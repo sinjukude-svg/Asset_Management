@@ -24,6 +24,7 @@
   .hero .small{color:rgba(255,255,255,.75);font-size:12px}
   .total-box{margin-top:20px}
   .total-num{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1.15}
+  .invest{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap}
   .pnl-pill{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:5px 14px;font-size:13px;font-weight:700;backdrop-filter:blur(4px)}
   .hero .up{color:#ffd9d6}.hero .down{color:#cfe0ff}
   .btn-hero{width:100%;margin-top:18px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:12px;padding:11px;font-weight:700;cursor:pointer;font-size:13px;backdrop-filter:blur(4px)}
@@ -108,12 +109,15 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.6</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.7</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
     <div class="small" id="totalLabel">총 평가금액</div>
-    <div class="total-num" id="totalVal">-</div>
+    <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+      <div class="total-num" id="totalVal">-</div>
+      <div class="invest" id="totalCost"></div>
+    </div>
     <div class="pnl-pill" id="totalPnl">-</div>
   </div>
   <button class="btn-hero" onclick="refreshPrices()">🔄 시세 새로고침</button>
@@ -639,6 +643,7 @@ function render(){
   searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'종목 이름을 누르면 수량·평단가를 수정할 수 있습니다.';
   totalVal.textContent=W(tot)+'원';
   const pnl=tot-cost,pr=cost?pnl/cost*100:0;
+  totalCost.innerHTML=cost?`투자 ${W(cost)}원 <span class="${pr>=0?'up':'down'}">(${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`:'';
   totalPnl.innerHTML=`<span class="${pnl>=0?'up':'down'}">${pnl>=0?'▲':'▼'} ${W(Math.abs(pnl))}원 (${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`;
   // 계좌별 자산 (총계좌일 때만)
   const acctTotals=S.accounts.map((a,i)=>{
