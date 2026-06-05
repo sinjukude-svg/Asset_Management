@@ -32,6 +32,7 @@
   h2{font-size:15px;font-weight:800;margin-bottom:13px;display:flex;align-items:center;gap:8px;letter-spacing:-.2px}
   .h-ico{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#eef1ff,#f3eeff);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
   .small{font-size:12px;color:#6b7280}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{padding:9px 4px;text-align:right;border-bottom:1px solid #f1f3f8;white-space:nowrap}
   th{color:#98a0b3;font-weight:700;font-size:11px}
@@ -71,6 +72,10 @@
   .acct-amt b{font-size:13px}
   .acct-chip{display:inline-flex;align-items:center;gap:6px;background:#f5f7fb;border-radius:99px;padding:6px 7px 6px 13px;font-size:12px;font-weight:600;margin:3px 4px 3px 0}
   .chip-x{background:#e3e7ef;border:none;border-radius:99px;width:18px;height:18px;line-height:1;font-size:11px;color:#666;cursor:pointer;padding:0}
+  /* ===== 그룹 탭 ===== */
+  .grp-tabs{display:flex;gap:7px;margin-bottom:13px}
+  .grp-tab{flex:1;text-align:center;padding:9px 4px;border-radius:11px;background:#f5f7fb;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid transparent;color:#6b7280}
+  .grp-tab.act{background:#eef1ff;border-color:#6d28d9;color:#4338ca}
   /* ===== 파이/막대 ===== */
   .pie{width:165px;height:165px;border-radius:50%;margin:8px auto;position:relative}
   .pie::after{content:'';position:absolute;inset:26%;background:#fff;border-radius:50%;box-shadow:inset 0 1px 5px rgba(0,0,0,.07)}
@@ -116,7 +121,13 @@
 </div>
 
 <div class="card">
-  <h2><span class="h-ico">➕</span>자산 추가</h2>
+  <h2><span class="h-ico">📂</span>그룹</h2>
+  <div class="grp-tabs" id="grpTabs"></div>
+  <div id="grpBody"></div>
+</div>
+
+<div class="card" id="addCard">
+  <h2 id="addTitle"><span class="h-ico">➕</span>자산 추가</h2>
   <div class="grid">
     <div class="combo">
       <input id="fName" placeholder="종목명/티커 (예: n, 삼성, 비트)" autocomplete="off" oninput="suggest()" onfocus="suggest()">
@@ -134,9 +145,18 @@
   </div>
   <div class="grid">
     <select id="fAcct"></select>
-    <div><span class="small">담을 계좌를 선택하세요</span></div>
+    <select id="fGrp">
+      <option value="">그룹 없음</option>
+      <option value="그룹1">그룹1</option>
+      <option value="그룹2">그룹2</option>
+      <option value="그룹3">그룹3</option>
+    </select>
   </div>
-  <button class="btn" onclick="addHolding()">추가 (현재가는 자동 조회)</button>
+  <p class="small" style="margin-bottom:8px">왼쪽: 담을 계좌 / 오른쪽: 그룹(선택사항)</p>
+  <div class="btn-row" style="margin-top:0">
+    <button class="btn" id="btnAdd" onclick="addHolding()">추가 (현재가는 자동 조회)</button>
+    <button class="btn btn-gray" id="btnCancel" style="display:none;flex:0 0 90px" onclick="cancelEdit()">취소</button>
+  </div>
   <div class="grid" style="margin-top:10px;align-items:center">
     <div><span class="small">환율(원/달러) — 자동 갱신: </span></div>
     <input id="fFx" type="number" step="any" onchange="setFx(this.value)">
@@ -147,7 +167,7 @@
   <h2><span class="h-ico">📋</span>보유종목 수익률</h2>
   <input class="search" id="fSearch" placeholder="종목 검색 (예: NNOX)" oninput="render()">
   <p class="small" id="searchInfo" style="margin-bottom:6px">현재가는 자동 조회되며, 칸을 직접 수정할 수도 있습니다.</p>
-  <table id="tbl"><thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>평가액(원)</th><th>수익률</th><th></th></tr></thead><tbody></tbody></table>
+  <div class="tbl-wrap"><table id="tbl"><thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>평가액(원)</th><th>수익률</th><th></th></tr></thead><tbody></tbody></table></div>
 </div>
 
 <div class="card">
@@ -224,6 +244,7 @@ const TICKERS=[
  {n:'한국항공우주',s:'047810.KS',m:'KR'},{n:'현대로템',s:'064350.KS',m:'KR'},{n:'현대모비스',s:'012330.KS',m:'KR'},
  {n:'에코프로비엠',s:'247540.KQ',m:'KR'},{n:'에코프로',s:'086520.KQ',m:'KR'},{n:'알테오젠',s:'196170.KQ',m:'KR'},
  {n:'HLB',s:'028300.KQ',m:'KR'},{n:'펄어비스',s:'263750.KQ',m:'KR'},{n:'카카오게임즈',s:'293490.KQ',m:'KR'},
+ {n:'아티스트컴퍼니',s:'321820.KQ',m:'KR'},
  // 한국 상장 ETF
  {n:'TIGER 미국나스닥100',s:'133690.KS',m:'KR'},{n:'TIGER 미국S&P500',s:'360750.KS',m:'KR'},
  {n:'TIGER 미국테크TOP10 INDXX',s:'381170.KS',m:'KR'},{n:'TIGER 미국테크TOP10채권혼합',s:'472170.KS',m:'KR'},
@@ -257,6 +278,7 @@ const TICKERS=[
  {n:'조비에비에이션',s:'JOBY',m:'US'},{n:'아처에비에이션',s:'ACHR',m:'US'},{n:'슈퍼마이크로',s:'SMCI',m:'US'},
  {n:'델',s:'DELL',m:'US'},{n:'오라클',s:'ORCL',m:'US'},{n:'세일즈포스',s:'CRM',m:'US'},{n:'어도비',s:'ADBE',m:'US'},
  {n:'우버',s:'UBER',m:'US'},{n:'에어비앤비',s:'ABNB',m:'US'},{n:'쇼피파이',s:'SHOP',m:'US'},{n:'페이팔',s:'PYPL',m:'US'},
+ {n:'유니티',s:'U',m:'US'},{n:'로블록스',s:'RBLX',m:'US'},{n:'유니티소프트웨어',s:'U',m:'US'},
  {n:'SPY(S&P500)',s:'SPY',m:'US'},{n:'QQQ(나스닥100)',s:'QQQ',m:'US'},{n:'VOO(S&P500)',s:'VOO',m:'US'},
  {n:'SCHD(배당)',s:'SCHD',m:'US'},{n:'TQQQ(3배)',s:'TQQQ',m:'US'},{n:'SOXL(반도체3배)',s:'SOXL',m:'US'},
  {n:'리얼티인컴',s:'O',m:'US'},{n:'TLT(미국채20년)',s:'TLT',m:'US'},{n:'IBIT(비트코인ETF)',s:'IBIT',m:'US'},
@@ -283,6 +305,7 @@ S.holdings.forEach(h=>{
     if(t){h.sym=t.s;h.mkt=t.m}else h.sym='';
   }
   if(!h.acct)h.acct=S.accounts[0];
+  if(h.grp===undefined)h.grp='';
 });
 if(S.view!=='ALL'&&!S.accounts.includes(S.view))S.view='ALL';
 
@@ -303,6 +326,11 @@ const inView=h=>S.view==='ALL'||h.acct===S.view;
 
 // ===== 계좌 =====
 function setView(v){S.view=v;save();render()}
+// ===== 그룹 =====
+const GROUPS=['그룹1','그룹2','그룹3'];
+let curGrp='그룹1';
+function setGrp(g){curGrp=g;render()}
+function rmFromGrp(i){S.holdings[i].grp='';save();render()}
 function addAcct(){
   const n=fNewAcct.value.trim();
   if(!n)return;
@@ -379,7 +407,12 @@ async function refreshPrices(){
   }
   const stocks=S.holdings.filter(h=>(h.mkt==='KR'||h.mkt==='US')&&h.sym);
   await Promise.all(stocks.map(async h=>{
-    const p=await yahooPrice(h.sym);
+    let p=await yahooPrice(h.sym);
+    if(p==null&&h.mkt==='KR'&&/\.(KS|KQ)$/.test(h.sym)){ // 코스피<->코스닥 자동 재시도
+      const alt=h.sym.endsWith('.KS')?h.sym.replace('.KS','.KQ'):h.sym.replace('.KQ','.KS');
+      p=await yahooPrice(alt);
+      if(p!=null)h.sym=alt;
+    }
     if(p){h.cur=h.mkt==='KR'?Math.round(p):p;ok++}else fail.push(h.name);
   }));
   S.holdings.filter(h=>!h.sym).forEach(h=>fail.push(h.name+'(직접입력)'));
@@ -391,9 +424,8 @@ async function refreshPrices(){
 }
 
 // ===== 자산 추가/수정 =====
-async function addHolding(){
-  const n=fName.value.trim(),q=+fQty.value,a=+fAvg.value,mkt=fMkt.value;
-  if(!n||!q||!a){alert('종목명, 수량, 평단가를 입력해주세요');return}
+let editIdx=-1,origName='',origSym='';
+function resolveSym(n,mkt){
   let sym=pendingSym;
   if(!sym){
     const t=TICKERS.find(t=>t.n===n||t.s.split('.')[0]===n.toUpperCase());
@@ -401,12 +433,44 @@ async function addHolding(){
     else if(mkt==='US'||mkt==='COIN')sym=n.toUpperCase();
     else if(mkt==='KR'&&/^\d{6}$/.test(n))sym=n+'.KS'; // 6자리 종목코드 직접 입력
   }
-  S.holdings.push({name:n,sym:sym||'',mkt,qty:q,avg:a,cur:a,acct:fAcct.value});
+  return sym||'';
+}
+async function addHolding(){
+  const n=fName.value.trim(),q=+fQty.value,a=+fAvg.value,mkt=fMkt.value;
+  if(!n||!q||!a){alert('종목명, 수량, 평단가를 입력해주세요');return}
+  if(editIdx>=0){ // 수정 모드
+    const h=S.holdings[editIdx];
+    if(n!==origName&&pendingSym===origSym)pendingSym=''; // 이름이 바뀌면 코드 다시 찾기
+    h.name=n;h.mkt=mkt;h.qty=q;h.avg=a;h.acct=fAcct.value;h.grp=fGrp.value;
+    h.sym=resolveSym(n,mkt);
+    cancelEdit();
+    save();render();refreshPrices();
+    return;
+  }
+  S.holdings.push({name:n,sym:resolveSym(n,mkt),mkt,qty:q,avg:a,cur:a,acct:fAcct.value,grp:fGrp.value});
   fName.value=fQty.value=fAvg.value='';pendingSym='';
   save();render();
   refreshPrices();
 }
-function delHolding(i){if(confirm(S.holdings[i].name+' 삭제할까요?')){S.holdings.splice(i,1);save();render()}}
+function editHolding(i){
+  const h=S.holdings[i];
+  editIdx=i;origName=h.name;origSym=h.sym;
+  render(); // 계좌 셀렉트 갱신 후 값 채우기
+  fName.value=h.name;pendingSym=h.sym;fMkt.value=h.mkt;
+  fQty.value=h.qty;fAvg.value=h.avg;fAcct.value=h.acct;fGrp.value=h.grp||'';
+  addTitle.innerHTML='<span class="h-ico">✏️</span>'+esc(h.name)+' 수정';
+  btnAdd.textContent='수정 내용 저장';
+  btnCancel.style.display='';
+  addCard.scrollIntoView({behavior:'smooth'});
+}
+function cancelEdit(){
+  editIdx=-1;origName='';origSym='';pendingSym='';
+  fName.value=fQty.value=fAvg.value='';fGrp.value='';
+  addTitle.innerHTML='<span class="h-ico">➕</span>자산 추가';
+  btnAdd.textContent='추가 (현재가는 자동 조회)';
+  btnCancel.style.display='none';
+}
+function delHolding(i){if(confirm(S.holdings[i].name+' 삭제할까요?')){if(editIdx>=0)cancelEdit();S.holdings.splice(i,1);save();render()}}
 function updCur(i,v){S.holdings[i].cur=+v||S.holdings[i].cur;save();render()}
 function setFx(v){S.fx=+v||S.fx;save();render()}
 function snapshot(){
@@ -508,10 +572,10 @@ function render(){
     shown++;
     const cur$=h.mkt==='US'?'$':'';
     const acctTag=S.view==='ALL'?`<div class="small" style="font-size:10px">${esc(h.acct)}</div>`:'';
-    tb.insertAdjacentHTML('beforeend',`<tr class="${q?'hit':''}"><td>${hilite(h.name,q)}<span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
+    tb.insertAdjacentHTML('beforeend',`<tr class="${q?'hit':''}"><td onclick="editHolding(${i})" style="cursor:pointer" title="누르면 수정">${hilite(h.name,q)} <span style="color:#c3c9d6;font-size:10px">✏️</span><span class="small"> ${h.sym?h.sym.split('.')[0]:h.mkt}</span>${acctTag}</td><td>${h.qty}</td><td>${cur$}${P(h.avg)}</td><td><input class="cur-input" type="number" step="any" value="${h.cur}" onchange="updCur(${i},this.value)"></td><td>${W(v)}</td><td><span class="pct-pill ${r>=0?'pp-up':'pp-down'}">${r>=0?'+':''}${r.toFixed(1)}%</span></td><td><button class="btn-sm" onclick="delHolding(${i})">삭제</button></td></tr>`);
   });
   if(!shown)tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#999;padding:14px">${q?'검색 결과가 없습니다':'이 계좌에 종목이 없습니다'}</td></tr>`;
-  searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'현재가는 자동 조회되며, 칸을 직접 수정할 수도 있습니다.';
+  searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'종목 이름을 누르면 수량·평단가를 수정할 수 있습니다.';
   totalVal.textContent=W(tot)+'원';
   const pnl=tot-cost,pr=cost?pnl/cost*100:0;
   totalPnl.innerHTML=`<span class="${pnl>=0?'up':'down'}">${pnl>=0?'▲':'▼'} ${W(Math.abs(pnl))}원 (${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`;
@@ -529,6 +593,23 @@ function render(){
       return `<div class="acct-row" onclick="setView('${esc(x.a).replace(/'/g,"\\'")}')"><div class="acct-ico">${ACCT_ICONS[x.i%ACCT_ICONS.length]}</div><div><div class="acct-name">${esc(x.a)}</div><div class="acct-sub">${x.n}종목 · ${allTot?(x.v/allTot*100).toFixed(0):0}%</div></div><div class="acct-amt"><b>${W(x.v)}원</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div></div>`;
     }).join('');
   }else acctCard.style.display='none';
+  // 그룹 탭 (계좌와 무관하게 전체 종목 기준)
+  grpTabs.innerHTML=GROUPS.map(g=>{
+    const n=S.holdings.filter(h=>h.grp===g).length;
+    return `<div class="grp-tab${curGrp===g?' act':''}" onclick="setGrp('${g}')">${g}${n?' ('+n+')':''}</div>`;
+  }).join('');
+  const gh=S.holdings.map((h,i)=>({h,i})).filter(o=>o.h.grp===curGrp);
+  if(!gh.length){
+    grpBody.innerHTML='<p class="small" style="text-align:center;padding:8px">자산 추가/수정에서 그룹을 지정하면 여기에 모아 보입니다</p>';
+  }else{
+    const gv=gh.reduce((s,o)=>s+valKRW(o.h),0),gc=gh.reduce((s,o)=>s+costKRW(o.h),0);
+    const gp=gv-gc,gr=gc?gp/gc*100:0;
+    grpBody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;padding-bottom:10px;border-bottom:1px solid #f1f3f8"><div><div class="small">${curGrp} 총액</div><div style="font-size:20px;font-weight:800">${W(gv)}원</div></div><div style="text-align:right"><div class="small">손익 / 수익률</div><div class="${gp>=0?'up':'down'}" style="font-weight:800">${gp>=0?'+':''}${W(gp)}원 (${gr>=0?'+':''}${gr.toFixed(1)}%)</div></div></div>`
+    +gh.map(o=>{
+      const v=valKRW(o.h),c=costKRW(o.h),r=c?(v-c)/c*100:0;
+      return `<div class="acct-row" style="cursor:default"><div><div class="acct-name">${esc(o.h.name)}</div><div class="acct-sub">${o.h.qty} · ${esc(o.h.acct||'')}</div></div><div class="acct-amt"><b>${KM(v)}</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div><button class="btn-sm" style="margin-left:10px" onclick="rmFromGrp(${o.i})">빼기</button></div>`;
+    }).join('');
+  }
   // 파이
   const viewH=S.holdings.filter(inView);
   let deg=0,grad=[],lg='';
