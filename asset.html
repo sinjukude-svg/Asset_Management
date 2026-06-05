@@ -71,6 +71,8 @@
   .acct-sub{font-size:11px;color:#98a0b3}
   .acct-amt{margin-left:auto;text-align:right}
   .acct-amt b{font-size:13px}
+  .acct-toggle{text-align:center;padding:9px;font-size:12px;font-weight:700;color:#4338ca;cursor:pointer;background:#f5f7fb;border-radius:10px;margin-top:8px}
+  .acct-toggle:active{background:#eef1ff}
   .acct-chip{display:inline-flex;align-items:center;gap:6px;background:#f5f7fb;border-radius:99px;padding:6px 7px 6px 13px;font-size:12px;font-weight:600;margin:3px 4px 3px 0}
   .chip-x{background:#e3e7ef;border:none;border-radius:99px;width:18px;height:18px;line-height:1;font-size:11px;color:#666;cursor:pointer;padding:0}
   /* ===== 그룹 탭 ===== */
@@ -103,7 +105,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.0</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.1</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -327,6 +329,8 @@ const inView=h=>S.view==='ALL'||h.acct===S.view;
 
 // ===== 계좌 =====
 function setView(v){S.view=v;save();render()}
+let acctOpen=false;
+function toggleAcct(){acctOpen=!acctOpen;render()}
 // ===== 그룹 =====
 const GROUPS=['그룹1','그룹2','그룹3'];
 let curGrp='그룹1';
@@ -589,10 +593,14 @@ function render(){
   const allTot=acctTotals.reduce((s,x)=>s+x.v,0);
   if(S.view==='ALL'&&acctTotals.length){
     acctCard.style.display='';
-    acctList.innerHTML=acctTotals.sort((x,y)=>y.v-x.v).map(x=>{
+    const sortedAcc=acctTotals.sort((x,y)=>y.v-x.v);
+    const ACC_LIMIT=3;
+    const showAcc=acctOpen?sortedAcc:sortedAcc.slice(0,ACC_LIMIT);
+    acctList.innerHTML=showAcc.map(x=>{
       const r=x.c?(x.v-x.c)/x.c*100:0;
       return `<div class="acct-row" onclick="setView('${esc(x.a).replace(/'/g,"\\'")}')"><div class="acct-ico">${ACCT_ICONS[x.i%ACCT_ICONS.length]}</div><div><div class="acct-name">${esc(x.a)}</div><div class="acct-sub">${x.n}종목 · ${allTot?(x.v/allTot*100).toFixed(0):0}%</div></div><div class="acct-amt"><b>${W(x.v)}원</b><div class="${r>=0?'up':'down'}" style="font-size:11px">${r>=0?'+':''}${r.toFixed(1)}%</div></div></div>`;
-    }).join('');
+    }).join('')
+    +(sortedAcc.length>ACC_LIMIT?`<div class="acct-toggle" onclick="toggleAcct()">${acctOpen?'▲ 접기':'▼ 전체 보기 ('+sortedAcc.length+'개 계좌)'}</div>`:'');
   }else acctCard.style.display='none';
   // 그룹 탭 (계좌와 무관하게 전체 종목 기준)
   grpTabs.innerHTML=GROUPS.map(g=>{
