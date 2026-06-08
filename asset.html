@@ -109,16 +109,16 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.7</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v1.8</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
-    <div class="small" id="totalLabel">총 평가금액</div>
-    <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+    <div class="small" id="totalLabel">총 평가금액 <span style="opacity:.7">· 👁 눌러서 보기</span></div>
+    <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap" id="amtBox" onclick="revealAmt()">
       <div class="total-num" id="totalVal">-</div>
       <div class="invest" id="totalCost"></div>
     </div>
-    <div class="pnl-pill" id="totalPnl">-</div>
+    <div class="pnl-pill" id="totalPnl" onclick="revealAmt()">-</div>
   </div>
   <button class="btn-hero" onclick="refreshPrices()">🔄 시세 새로고침</button>
   <div class="hero-note" id="updStatus">앱을 열면 시세를 자동으로 불러옵니다.</div>
@@ -334,8 +334,20 @@ const valKRW=h=>h.qty*h.cur*(h.mkt==='US'?S.fx:1);
 const costKRW=h=>h.qty*h.avg*(h.mkt==='US'?S.fx:1);
 const inView=h=>S.view==='ALL'||h.acct===S.view;
 
+// ===== 금액 가리기 (탭하면 10초간 보임) =====
+let amtShown=false,amtTimer=null;
+function revealAmt(){
+  amtShown=true;render();
+  clearTimeout(amtTimer);
+  amtTimer=setTimeout(()=>{amtShown=false;render()},10000);
+}
 // ===== 계좌 =====
-function setView(v){S.view=v;save();render()}
+let acctTimer=null;
+function setView(v){
+  S.view=v;save();render();
+  clearTimeout(acctTimer);
+  if(v!=='ALL')acctTimer=setTimeout(()=>{S.view='ALL';save();render()},10000); // 10초 후 총계좌 복귀
+}
 let acctOpen=false,tblOpen=false,topOpen=false,grpListOpen=false;
 function toggleAcct(){acctOpen=!acctOpen;render()}
 function toggleTbl(){tblOpen=!tblOpen;render()}
@@ -617,7 +629,6 @@ function render(){
   fAcct.innerHTML=S.accounts.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
   if(S.accounts.includes(prevAcct))fAcct.value=prevAcct;
   else if(S.view!=='ALL')fAcct.value=S.view;
-  totalLabel.textContent=(S.view==='ALL'?'총':S.view+' ')+' 평가금액';
   // 계좌 관리 칩
   acctChips.innerHTML=S.accounts.map((a,i)=>`<span class="acct-chip">${esc(a)}<button class="chip-x" onclick="delAcct(${i})">✕</button></span>`).join('');
   // 보유종목 표
@@ -641,10 +652,18 @@ function render(){
     +(cut?`<tr><td colspan="8" style="padding:4px 0;border:none"><div class="acct-toggle" onclick="toggleTbl()">${tblOpen?'▲ 접기':'▼ 전체 보기 ('+rowsArr.length+'개 종목)'}</div></td></tr>`:'');
   if(!shown)tb.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#999;padding:14px">${q?'검색 결과가 없습니다':'이 계좌에 종목이 없습니다'}</td></tr>`;
   searchInfo.textContent=q?`'${fSearch.value.trim()}' 검색 결과: ${shown}개`:'종목 이름을 누르면 수량·평단가를 수정할 수 있습니다.';
-  totalVal.textContent=W(tot)+'원';
   const pnl=tot-cost,pr=cost?pnl/cost*100:0;
-  totalCost.innerHTML=cost?`투자 ${W(cost)}원 <span class="${pr>=0?'up':'down'}">(${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`:'';
-  totalPnl.innerHTML=`<span class="${pnl>=0?'up':'down'}">${pnl>=0?'▲':'▼'} ${W(Math.abs(pnl))}원 (${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`;
+  if(amtShown){
+    totalLabel.innerHTML=(S.view==='ALL'?'총':esc(S.view)+' ')+' 평가금액';
+    totalVal.textContent=W(tot)+'원';
+    totalCost.innerHTML=cost?`투자 ${W(cost)}원 <span class="${pr>=0?'up':'down'}">(${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`:'';
+    totalPnl.innerHTML=`<span class="${pnl>=0?'up':'down'}">${pnl>=0?'▲':'▼'} ${W(Math.abs(pnl))}원 (${pr>=0?'+':''}${pr.toFixed(1)}%)</span>`;
+  }else{
+    totalLabel.innerHTML=(S.view==='ALL'?'총':esc(S.view)+' ')+' 평가금액 <span style="opacity:.7">· 👁 눌러서 보기</span>';
+    totalVal.textContent='••••••';
+    totalCost.innerHTML='';
+    totalPnl.innerHTML='<span style="opacity:.85">눌러서 보기</span>';
+  }
   // 계좌별 자산 (총계좌일 때만)
   const acctTotals=S.accounts.map((a,i)=>{
     const hs=S.holdings.filter(h=>h.acct===a);
