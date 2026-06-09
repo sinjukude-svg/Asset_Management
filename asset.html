@@ -83,6 +83,20 @@
   .grp-tabs{display:flex;gap:7px;margin-bottom:13px}
   .grp-tab{flex:1;text-align:center;padding:9px 4px;border-radius:11px;background:#f5f7fb;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid transparent;color:#6b7280}
   .grp-tab.act{background:#eef1ff;border-color:#6d28d9;color:#4338ca}
+  /* ===== 시황 달력 ===== */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-nav{background:#f1f3f8;border:none;border-radius:10px;padding:6px 16px;font-size:17px;font-weight:800;cursor:pointer;color:#4338ca}
+  .cal-nav:active{background:#eef1ff}
+  #calTitle{font-weight:800;font-size:16px}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-wd{text-align:center;font-size:11px;font-weight:700;color:#98a0b3;padding:2px 0}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:14px;font-weight:700;color:#c3c9d6;border:2px solid transparent}
+  .cal-day.has{cursor:pointer;color:#1a1f2e}
+  .cal-day.has:active{filter:brightness(.95)}
+  .cal-day.sel{box-shadow:0 0 0 2px #6d28d9}
+  .cal-day.today{outline:2px dotted #8a93a6;outline-offset:-4px}
+  .cal-legend{display:flex;gap:14px;justify-content:center;font-size:11px;color:#6b7280;margin-top:10px}
+  .cal-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
   /* ===== 파이/막대 ===== */
   .pie{width:165px;height:165px;border-radius:50%;margin:8px auto;position:relative}
   .pie::after{content:'';position:absolute;inset:26%;background:#fff;border-radius:50%;box-shadow:inset 0 1px 5px rgba(0,0,0,.07)}
@@ -103,13 +117,70 @@
   .top-line2{display:flex;justify-content:space-between;font-size:11px;color:#98a0b3}
   svg{width:100%;height:auto}
   .disclaimer{font-size:11px;color:#a7adba;text-align:center;padding:8px 8px 20px}
+  /* ===== 홈 화면 ===== */
+  .home-hero{background:linear-gradient(135deg,#4338ca 0%,#6d28d9 60%,#7c3aed 100%);color:#fff;border-radius:24px;padding:30px 22px;margin-bottom:18px;box-shadow:0 12px 32px rgba(67,56,202,.35);text-align:center}
+  .home-hero h1{font-size:23px;font-weight:800;letter-spacing:-.4px}
+  .home-hero .date{font-size:13px;color:rgba(255,255,255,.78);margin-top:6px}
+  .home-btn{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:#fff;border:none;border-radius:20px;padding:22px 20px;margin-bottom:14px;cursor:pointer;box-shadow:0 2px 12px rgba(23,32,70,.07);transition:transform .12s}
+  .home-btn:active{transform:scale(.98)}
+  .home-ico{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;background:linear-gradient(135deg,#eef1ff,#f3eeff)}
+  .home-txt b{display:block;font-size:17px;font-weight:800;letter-spacing:-.3px;color:#1a1f2e}
+  .home-txt span{font-size:12px;color:#8a93a6}
+  .home-arrow{margin-left:auto;color:#c3c9d6;font-size:20px}
+  .back-bar{display:flex;align-items:center;margin-bottom:12px}
+  .back-btn{background:#fff;border:1.5px solid #e5e8f0;border-radius:99px;padding:8px 16px 8px 12px;font-size:13px;font-weight:700;color:#4338ca;cursor:pointer;box-shadow:0 2px 8px rgba(23,32,70,.05)}
+  .back-btn:active{background:#f4f1ff}
 </style>
 </head>
 <body><div class="wrap">
 
+<!-- ===== 처음 화면(홈) ===== -->
+<div id="homeScreen">
+  <div class="home-hero">
+    <h1>💼 내 자산관리 <span class="ver">v2.9</span></h1>
+    <div class="date" id="todayHome"></div>
+  </div>
+  <div id="riskBox" style="display:none;border-radius:18px;border:1.5px solid #f0c000;background:#fff7d6;padding:16px 18px;margin-bottom:14px;cursor:pointer" onclick="goto('report')"></div>
+  <button class="home-btn" onclick="goto('report')">
+    <span class="home-ico">📰</span>
+    <span class="home-txt"><b>오늘의 시황 리포트</b><span>아침 미국장·한국장 리포트 보기</span></span>
+    <span class="home-arrow">›</span>
+  </button>
+  <button class="home-btn" onclick="goto('asset')">
+    <span class="home-ico">💼</span>
+    <span class="home-txt"><b>내 자산</b><span>보유종목·계좌·수익률 관리</span></span>
+    <span class="home-arrow">›</span>
+  </button>
+</div>
+
+<!-- ===== 시황 리포트 화면 ===== -->
+<div id="reportScreen" style="display:none">
+  <div class="back-bar"><button class="back-btn" onclick="goto('home')">← 처음으로</button></div>
+  <div class="card">
+    <h2><span class="h-ico">📰</span>시황 리포트</h2>
+    <div class="cal-head">
+      <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+      <div id="calTitle">-</div>
+      <button class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calWeek"></div>
+    <div class="cal-grid" id="calDays" style="margin-top:5px"></div>
+    <div class="cal-legend"><span><i style="background:#0caa67"></i>정상</span><span><i style="background:#f0c000"></i>주의</span><span><i style="background:#e0342f"></i>위험</span><span style="opacity:.7">색=미국장 경고등</span></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn" id="btnUS" onclick="openReport('US')">🇺🇸 미국장 리포트</button>
+      <button class="btn btn-gray" id="btnKR" onclick="openReport('KR')">🇰🇷 한국장 리포트</button>
+    </div>
+    <p class="small" id="reportStatus" style="margin-top:8px">달력에서 날짜를 누르세요.</p>
+  </div>
+</div>
+
+<!-- ===== 내 자산 화면 ===== -->
+<div id="assetScreen" style="display:none">
+<div class="back-bar"><button class="back-btn" onclick="goto('home')">← 처음으로</button></div>
+
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v1.8</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v2.9</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -193,8 +264,7 @@
 
 <div class="card">
   <h2><span class="h-ico">📈</span>자산 추이</h2>
-  <p class="small" id="chartHint">아래 버튼을 누르면 오늘 날짜로 기록됩니다. 꾸준히 누르면 추세가 그려집니다.</p>
-  <div class="btn-row"><button class="btn" onclick="snapshot()">오늘 자산 기록하기</button></div>
+  <p class="small" id="chartHint">매일 17시 이후 앱을 열면 그날 자산이 자동으로 기록됩니다.</p>
   <div id="chart" style="margin-top:10px"></div>
 </div>
 
@@ -231,6 +301,8 @@
 </div>
 
 <div class="disclaimer">경향성 참고용 개인 기록 도구입니다. 시세는 외부 무료 API 기준으로 지연·오차가 있을 수 있습니다. 투자 판단과 책임은 본인에게 있습니다.</div>
+
+</div><!-- /assetScreen -->
 
 </div>
 <script>
@@ -334,6 +406,148 @@ const valKRW=h=>h.qty*h.cur*(h.mkt==='US'?S.fx:1);
 const costKRW=h=>h.qty*h.avg*(h.mkt==='US'?S.fx:1);
 const inView=h=>S.view==='ALL'||h.acct===S.view;
 
+// ===== 화면 전환 (홈 / 시황 리포트 / 내 자산) + 폰 뒤로가기 =====
+let curScreen='home';
+function goto(screen,fromPop){
+  curScreen=screen;
+  homeScreen.style.display=screen==='home'?'':'none';
+  reportScreen.style.display=screen==='report'?'':'none';
+  assetScreen.style.display=screen==='asset'?'':'none';
+  window.scrollTo(0,0);
+  if(screen==='asset')render();
+  // 폰 뒤로가기 지원: 하위 화면 진입 시 방문기록 추가, 뒤로 누르면 홈 복귀
+  if(!fromPop){
+    if(screen==='home')history.replaceState({screen:'home'},'');
+    else history.pushState({screen},'');
+  }
+}
+window.addEventListener('popstate',e=>{
+  const s=(e.state&&e.state.screen)||'home';
+  goto(s,true);
+});
+// ===== 시황 리포트 (stock-report 저장소에 날짜별로 누적 업로드됨) =====
+const REPORT_BASE='https://sinjukude-svg.github.io/stock-report/';
+const reportSel={US:null,KR:null}; // 선택 날짜의 실제 URL(없으면 null)
+const todayStr=()=>new Date().toISOString().slice(0,10);
+// 파일명 두 형식 모두 지원: US_DATE.html (신규), US_리포트_DATE.html (구버전 6/4)
+function reportCandidates(mkt,d){return [REPORT_BASE+mkt+'_'+d+'.html',REPORT_BASE+mkt+'_리포트_'+d+'.html'];}
+async function exists(url){try{const r=await fetch(url,{method:'HEAD'});return r.ok}catch(e){return false}}
+async function resolveReport(mkt,d){
+  for(const u of reportCandidates(mkt,d)){if(await exists(u))return u}
+  return null;
+}
+// 리포트 HTML에서 🚦 경고등 등급+근거 추출 (미국장/한국장 두 형식 모두 지원)
+function extractRisk(html){
+  const idx=html.indexOf('리스크 경고등');
+  if(idx<0)return null;
+  const seg=html.slice(Math.max(0,idx-300),idx+400); // 등급 판정용 구간
+  let lvl=null;
+  if(/signal-red/.test(seg)||seg.includes('🔴')||/경고등[:\s]*위험/.test(seg))lvl='R';
+  else if(/signal-yellow/.test(seg)||seg.includes('🟡')||/경고등[:\s]*주의/.test(seg))lvl='Y';
+  else if(seg.includes('🟢')||/경고등[:\s]*정상/.test(seg)||/class="signal"/.test(seg))lvl='G';
+  // 근거: 경고등 표시 뒤 첫 <p> 본문
+  const pm=html.slice(idx).match(/<p[^>]*>([\s\S]*?)<\/p>/);
+  let reason=pm?pm[1].replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&nbsp;/g,' ').trim():'';
+  return {lvl,reason};
+}
+function parseRisk(html){const r=extractRisk(html);return r?r.lvl:null}
+const riskLabel=l=>l==='R'?'🔴 위험':l==='Y'?'🟡 주의':l==='G'?'🟢 정상':'—';
+const riskRank=l=>l==='R'?3:l==='Y'?2:l==='G'?1:0;
+function riskColor(lvl){
+  return lvl==='R'?{bg:'#fdeaea',bd:'#e0342f'}:lvl==='G'?{bg:'#e7f7ee',bd:'#0caa67'}:lvl==='Y'?{bg:'#fff7d6',bd:'#f0c000'}:{bg:'#f5f7fb',bd:'#e5e8f0'};
+}
+// ===== 색상 달력 =====
+let calY,calM,selDate=null;
+const dateMap={}; // 'YYYY-MM-DD' -> {u,k,risk} 또는 {none:true}
+const pad2=n=>String(n).padStart(2,'0');
+const ymd=(y,m,day)=>`${y}-${pad2(m+1)}-${pad2(day)}`;
+async function checkReportDate(){
+  const d=selDate;
+  if(!d){reportStatus.textContent='달력에서 날짜를 선택하세요.';return}
+  reportStatus.textContent='⏳ '+d+' 리포트 확인 중...';
+  const [u,k]=await Promise.all([resolveReport('US',d),resolveReport('KR',d)]);
+  reportSel.US=u;reportSel.KR=k;
+  btnUS.style.opacity=u?'1':'.45';btnKR.style.opacity=k?'1':'.45';
+  reportStatus.innerHTML=`${d} — 미국장 ${u?'✅':'❌없음'} · 한국장 ${k?'✅':'❌없음'}`;
+}
+function renderCal(){
+  calTitle.textContent=`${calY}년 ${calM+1}월`;
+  calWeek.innerHTML=['일','월','화','수','목','금','토'].map(w=>`<div class="cal-wd">${w}</div>`).join('');
+  const first=new Date(calY,calM,1).getDay();
+  const last=new Date(calY,calM+1,0).getDate();
+  const today=todayStr();
+  let html='';
+  for(let i=0;i<first;i++)html+='<div></div>';
+  for(let day=1;day<=last;day++){
+    const d=ymd(calY,calM,day),info=dateMap[d],has=info&&!info.none;
+    // 리포트가 있으면 무조건 색 표시: 경고등 등급이 있으면 그 색, 없으면(미국장 미게시 등) 중립 파랑
+    const c=has?(info.risk?riskColor(info.risk):{bg:'#eef4ff',bd:'#9bbcf0'}):{bg:'',bd:'transparent'};
+    const cls=['cal-day'];if(has)cls.push('has');if(d===selDate)cls.push('sel');if(d===today)cls.push('today');
+    const style=has?`background:${c.bg};border-color:${c.bd}`:'';
+    html+=`<div class="${cls.join(' ')}" style="${style}" ${has?`onclick="pickDate('${d}')"`:''}>${day}</div>`;
+  }
+  calDays.innerHTML=html;
+}
+async function loadMonth(){
+  renderCal(); // 우선 숫자만 표시
+  const last=new Date(calY,calM+1,0).getDate(),today=todayStr(),tasks=[];
+  for(let day=1;day<=last;day++){
+    const d=ymd(calY,calM,day);
+    if(d>today||dateMap[d])continue;
+    tasks.push((async()=>{
+      const [uu,kk]=await Promise.all([resolveReport('US',d),resolveReport('KR',d)]);
+      let risk=null;
+      if(uu){try{risk=parseRisk(await (await fetch(uu)).text())}catch(e){}}
+      dateMap[d]=(uu||kk)?{u:!!uu,k:!!kk,risk}:{none:true};
+    })());
+  }
+  await Promise.all(tasks);
+  renderCal();
+}
+function changeMonth(delta){
+  calM+=delta;
+  if(calM<0){calM=11;calY--}else if(calM>11){calM=0;calY++}
+  loadMonth();
+}
+function pickDate(d){selDate=d;renderCal();checkReportDate()}
+async function loadReports(){ // 시작 시 이번 달 달력 + 최근 리포트 날짜 자동 선택
+  const now=new Date();calY=now.getFullYear();calM=now.getMonth();
+  await loadMonth();
+  let latest=null;
+  Object.keys(dateMap).sort().reverse().forEach(d=>{if(!latest&&dateMap[d]&&!dateMap[d].none)latest=d});
+  if(latest){selDate=latest;renderCal();checkReportDate()}
+  else reportStatus.textContent='이번 달 리포트가 없습니다. ‹ › 로 다른 달을 보세요.';
+}
+function openReport(mkt){
+  if(!selDate){alert('달력에서 날짜를 먼저 선택하세요');return}
+  if(!reportSel[mkt]){alert(selDate+' 날짜의 '+(mkt==='US'?'미국장':'한국장')+' 리포트가 없습니다.');return}
+  window.open(reportSel[mkt],'_blank');
+}
+// 가장 최근 미국장 리포트에서 🚦 리스크 경고등 추출 → 홈 배너 표시
+async function latestReportUrl(mkt){
+  const now=Date.now();
+  for(let k=0;k<30;k++){const d=new Date(now-k*86400000).toISOString().slice(0,10);const u=await resolveReport(mkt,d);if(u)return{u,d}}
+  return null;
+}
+async function loadRisk(){
+  const [us,kr]=await Promise.all([latestReportUrl('US'),latestReportUrl('KR')]);
+  const rows=[];let worst='';
+  for(const item of [{flag:'🇺🇸',name:'미국장',info:us},{flag:'🇰🇷',name:'한국장',info:kr}]){
+    if(!item.info)continue;
+    try{
+      const html=await (await fetch(item.info.u)).text();
+      const r=extractRisk(html);
+      if(!r||!r.lvl)continue;
+      if(riskRank(r.lvl)>riskRank(worst))worst=r.lvl;
+      let reason=r.reason;if(reason.length>110)reason=reason.slice(0,110)+'…';
+      rows.push(`<div style="margin-top:9px"><b style="font-size:14px">${item.flag} ${item.name} · ${riskLabel(r.lvl)}</b><div class="small" style="margin-top:3px;color:#444;line-height:1.45">${reason}</div><div class="small" style="margin-top:2px;opacity:.6">${item.info.d} 기준</div></div>`);
+    }catch(e){}
+  }
+  if(!rows.length){riskBox.style.display='none';return}
+  const c=riskColor(worst);
+  riskBox.style.display='';riskBox.style.background=c.bg;riskBox.style.borderColor=c.bd;
+  riskBox.innerHTML=`<div style="font-weight:800;font-size:16px">🚦 리스크 경고등</div>${rows.join('')}<div class="small" style="margin-top:8px;opacity:.6">눌러서 리포트 보기</div>`;
+}
 // ===== 금액 가리기 (탭하면 10초간 보임) =====
 let amtShown=false,amtTimer=null;
 function revealAmt(){
@@ -443,7 +657,7 @@ async function refreshPrices(){
     if(p){h.cur=h.mkt==='KR'?Math.round(p):p;ok++}else fail.push(h.name);
   }));
   S.holdings.filter(h=>!h.sym).forEach(h=>fail.push(h.name+'(직접입력)'));
-  save();render();
+  save();autoSnapshot();render();
   const t=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   updStatus.textContent=fail.length
     ?`✅ ${ok}개 갱신 (${t}) · 실패: ${fail.join(', ')} — 현재가 칸에 직접 입력하세요`
@@ -507,6 +721,13 @@ function snapshot(){
   S.accounts.forEach(a=>{by[a]=S.holdings.filter(h=>h.acct===a).reduce((s,h)=>s+valKRW(h),0)});
   S.history=S.history.filter(x=>x.d!==d);S.history.push({d,total:t,by});
   S.history.sort((x,y)=>x.d<y.d?-1:1);save();render();
+}
+// 매일 17시 이후 앱을 열면 그날 결산을 자동 기록 (그날 기록이 없을 때만)
+function autoSnapshot(){
+  const now=new Date(),d=now.toISOString().slice(0,10);
+  if(now.getHours()>=17 && S.holdings.length && !S.history.some(x=>x.d===d)){
+    snapshot();
+  }
 }
 // ===== 클라우드 동기화 (GitHub) =====
 const GH_API='https://api.github.com/repos/sinjukude-svg/Asset_Management/contents/data.json';
@@ -736,8 +957,8 @@ function render(){
   }).join('')+(sorted.length>TOP_LIMIT?`<div class="acct-toggle" onclick="toggleTop()">${topOpen?'▲ 접기':'▼ 전체 보기 ('+sorted.length+'개 종목)'}</div>`:''):'<p class="small" style="text-align:center;padding:8px">종목을 추가하면 표시됩니다</p>';
   // 자산 추이 (계좌별)
   chartHint.textContent=S.view==='ALL'
-    ?'아래 버튼을 누르면 오늘 날짜로 전체·계좌별 자산이 기록됩니다.'
-    :`'${S.view}' 계좌의 추이입니다. 기록 버튼은 모든 계좌를 함께 기록합니다.`;
+    ?'매일 17시 이후 앱을 열면 전체·계좌별 자산이 자동 기록됩니다.'
+    :`'${S.view}' 계좌의 추이입니다. (매일 17시 이후 자동 기록)`;
   const series=S.history.map(x=>({d:x.d,v:S.view==='ALL'?x.total:(x.by?x.by[S.view]:undefined)})).filter(x=>x.v!=null);
   if(series.length<2){chart.innerHTML='<p class="small" style="text-align:center">기록이 2개 이상 쌓이면 그래프가 그려집니다 ('+series.length+'개)</p>';return}
   const w=480,ht=180,pad=36;
@@ -750,8 +971,12 @@ function render(){
 }
 save();
 render();
+todayHome.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+history.replaceState({screen:'home'},''); // 홈을 방문기록 시작점으로
 fTok.value=localStorage.getItem('ghToken')||'';
 refreshPrices();
+loadReports();
+loadRisk();
 </script>
 </body>
 </html>
