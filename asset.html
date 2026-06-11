@@ -137,10 +137,15 @@
 <!-- ===== 처음 화면(홈) ===== -->
 <div id="homeScreen">
   <div class="home-hero">
-    <h1>💼 내 자산관리 <span class="ver">v2.9</span></h1>
+    <h1>💼 내 자산관리 <span class="ver">v3.1</span></h1>
     <div class="date" id="todayHome"></div>
   </div>
   <div id="riskBox" style="display:none;border-radius:18px;border:1.5px solid #f0c000;background:#fff7d6;padding:16px 18px;margin-bottom:14px;cursor:pointer" onclick="goto('report')"></div>
+  <div class="card">
+    <h2><span class="h-ico">🎯</span>나스닥100 매수 신호</h2>
+    <div id="ndxSignal"><span class="small">불러오는 중...</span></div>
+    <p class="small" style="margin-top:8px;opacity:.7">1배 지수(TIGER 미국나스닥100) 전고점 대비 하락률 기준. 레버리지는 같은 신호에서 약 2배 빠집니다. 참고용이며 투자 판단·책임은 본인.</p>
+  </div>
   <button class="home-btn" onclick="goto('report')">
     <span class="home-ico">📰</span>
     <span class="home-txt"><b>오늘의 시황 리포트</b><span>아침 미국장·한국장 리포트 보기</span></span>
@@ -180,7 +185,7 @@
 
 <div class="hero">
   <div class="hero-top">
-    <div><h1>💼 내 자산관리 <span class="ver">v2.9</span></h1><div class="date" id="today"></div></div>
+    <div><h1>💼 내 자산관리 <span class="ver">v3.1</span></h1><div class="date" id="today"></div></div>
     <select class="acct-sel" id="acctSel" onchange="setView(this.value)"></select>
   </div>
   <div class="total-box">
@@ -547,6 +552,48 @@ async function loadRisk(){
   const c=riskColor(worst);
   riskBox.style.display='';riskBox.style.background=c.bg;riskBox.style.borderColor=c.bd;
   riskBox.innerHTML=`<div style="font-weight:800;font-size:16px">🚦 리스크 경고등</div>${rows.join('')}<div class="small" style="margin-top:8px;opacity:.6">눌러서 리포트 보기</div>`;
+}
+// ===== 나스닥100 매수 신호 (1배 지수 전고점 대비 하락률) =====
+async function yahooSeries(sym){
+  const target=encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1y`);
+  const proxies=[`https://corsproxy.io/?url=${target}`,`https://api.allorigins.win/raw?url=${target}`];
+  for(const p of proxies){
+    try{
+      const j=await fetchJSON(p);
+      const r=j.chart&&j.chart.result&&j.chart.result[0];
+      if(!r||!r.meta||!r.meta.regularMarketPrice)continue;
+      const price=r.meta.regularMarketPrice;
+      let high=r.meta.fiftyTwoWeekHigh||0;
+      const cl=r.indicators&&r.indicators.quote&&r.indicators.quote[0]&&r.indicators.quote[0].close;
+      if(cl){const mx=Math.max(...cl.filter(x=>x!=null));if(mx>high)high=mx;}
+      if(high)return{price,high};
+    }catch(e){}
+  }
+  return null;
+}
+async function loadNdxSignal(){
+  const box=document.getElementById('ndxSignal');
+  const d=await yahooSeries('133690.KS'); // TIGER 미국나스닥100 (1배)
+  if(!d){box.innerHTML='<span class="small">시세를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.</span>';return}
+  const dd=(d.price/d.high-1)*100;
+  const L=[{p:10,n:'1차'},{p:20,n:'2차'},{p:30,n:'3차'}];
+  let stage=0;L.forEach(l=>{if(dd<=-l.p)stage=l.p});
+  const stLabel=stage?`${L.find(l=>l.p===stage).n} 매수 구간 (-${stage}%)`:'대기 (아직 -10% 미만)';
+  const acc=stage>=30?{bg:'#e7f7ee',bd:'#0caa67'}:stage>=20?{bg:'#fff3d6',bd:'#f59e0b'}:stage>=10?{bg:'#fff7d6',bd:'#f0c000'}:{bg:'#f5f7fb',bd:'#e5e8f0'};
+  const rows=L.map(l=>{
+    const lv=Math.round(d.high*(1-l.p/100));
+    const hit=dd<=-l.p;
+    return `<div style="display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #f1f3f8;${hit?'font-weight:800;color:#1a1f2e':'color:#98a0b3'}">
+      <span>${hit?'✅':'⬜'} -${l.p}% (${l.n}) · 1:${l.p===10?'1':l.p===20?'1.5':'2'} 비중</span><span>${W(lv)}원</span></div>`;
+  }).join('');
+  box.innerHTML=`
+    <div style="background:${acc.bg};border:1.5px solid ${acc.bd};border-radius:14px;padding:14px 16px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#39404f">전고점 대비</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-.5px" class="${dd<0?'down':'up'}">${dd>=0?'+':''}${dd.toFixed(1)}%</div>
+      <div style="font-weight:800;margin-top:4px">${stLabel}</div>
+    </div>
+    <div class="small" style="display:flex;justify-content:space-between;margin-bottom:6px"><span>전고점 ${W(d.high)}원</span><span>현재 ${W(d.price)}원</span></div>
+    ${rows}`;
 }
 // ===== 금액 가리기 (탭하면 10초간 보임) =====
 let amtShown=false,amtTimer=null;
@@ -977,6 +1024,7 @@ fTok.value=localStorage.getItem('ghToken')||'';
 refreshPrices();
 loadReports();
 loadRisk();
+loadNdxSignal();
 </script>
 </body>
 </html>
